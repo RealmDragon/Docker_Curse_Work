@@ -1,4 +1,4 @@
-version: '3'
+'version': '3'
 
 services:
 
@@ -6,31 +6,34 @@ services:
     image: redis:latest
     restart: on-failure
     expose:
-      - "6379"
+      - '6379'
+
   db:
-    image: postgres
+    image: postgres:16-alpine
     restart: on-failure
-    environment:
-      POSTGRES_PASSWORD: mysecretpassword
-      PGDATA: /var/lib/postgresql/data/pgdata
-      POSTGRES_HOST_AUTH_METHOD : trust
-    healthcheck:
-      test: ["CMD-SHELL", "-c", "pg_isready -U $POSTGRES_USER"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     env_file:
       - .env
+    expose:
+      - '5432'
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', '-c', 'pg_isready -U $POSTGRES_USER']
+      interval: 10s
+      retries: 5
+      timeout: 5s
 
   app:
     build: .
     tty: true
-    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     ports:
-      - "8000:8000"
+      - '8000:8000'
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - .:/app
     env_file:
       - .env
 
@@ -39,6 +42,8 @@ services:
     tty: true
     command: celery -A config worker -l info
     restart: on-failure
+    volumes:
+      - .:/app
     depends_on:
       - redis
       - db
@@ -51,9 +56,14 @@ services:
     tty: true
     command: celery -A config beat -l info
     restart: on-failure
+    volumes:
+      - .:/app
     depends_on:
       - redis
       - db
       - app
     env_file:
       - .env
+
+volumes:
+  pg_data:

@@ -2,14 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Копируем только файл с зависимостями
-COPY pyproject.toml poetry.lock ./
+COPY /requirements.txt /
 
-# Устанавливаем Poetry и зависимости
-RUN pip install poetry && \
-    poetry config virtualenvs.create false && \
-    poetry install --no-dev --no-root
+RUN pip install -r /requirements.txt --no-cache-dir
 
 COPY . .
 
-CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver"]
+# CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver"]
